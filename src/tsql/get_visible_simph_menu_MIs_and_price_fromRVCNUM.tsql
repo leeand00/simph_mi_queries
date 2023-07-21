@@ -1,0 +1,84 @@
+USE [CAPS_DB]
+GO
+
+/****** Object:  StoredProcedure [dbo].[get_visible_simph_menu_MIs_and_price_fromRVCNUM]    Script Date: 7/21/2023 2:37:22 PM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+
+
+CREATE   PROCEDURE [dbo].[get_visible_simph_menu_MIs_and_price_fromRVCNUM]
+    @rvcnum int = NULL,
+	@h_id int = NULL
+	
+AS   
+    SET NOCOUNT ON;  
+
+-- =============================================
+-- Author:		<Author,,Name>
+-- Create date: <Create Date,,>
+-- Description:	<Description,,>
+-- =============================================
+IF @rvcnum IS NULL 
+BEGIN
+	PRINT 'ERROR: RVC_num_is_required.'
+	RETURN
+END
+
+IF @h_id IS NULL
+BEGIN
+	PRINT 'ERROR An h_id is required:'
+	PRINT ' 32 - PDRAFT'
+	PRINT ' 25 - Eatery'
+	RETURN
+END
+
+BEGIN
+
+	PRINT @rvcnum
+
+	DECLARE @temp TABLE (OBJNUM INT, MAJORGRP VARCHAR(128), FamilyGrp VARCHAR(255), RptName VARCHAR(255), SLUNAME VARCHAR(255), PRICE NUMERIC(21,4))
+
+	DECLARE @OBJNUM INT
+	DECLARE @MajorGrp VARCHAR(255)
+	DECLARE @FamilyGrp VARCHAR(255)
+	DECLARE @RptName VARCHAR(255)
+	DECLARE @SLUNAME VARCHAR(255)
+	DECLARE @PRICE NUMERIC(21,2)
+
+	DECLARE @rec_set CURSOR
+
+	DECLARE @start_range_str NVARCHAR(255) = CONCAT((CAST(@rvcnum AS VARCHAR)), '00000')
+	DECLARE @end_range_str NVARCHAR(255) = CONCAT((CAST(@rvcnum AS NVARCHAR)), '99999')
+
+	DECLARE @start_range_arg int = CAST(@start_range_str AS INT)
+	DECLARE @end_range_arg int = CAST(@end_range_str AS INT)
+
+	PRINT @start_range_str
+	PRINT @end_range_str
+
+
+	EXEC CAPS_DB.dbo.get_visible_simph_menu_MIs_and_price @start_range_arg, @end_range_arg, @h_id, @the_results = @rec_set OUTPUT
+
+	FETCH NEXT FROM @rec_set INTO @OBJNUM, @MAJORGRP, @FAMILYGRP, @RPTNAME, @SLUNAME, @PRICE
+
+		print @@cursor_ROWS
+		WHILE (@@FETCH_STATUS <> -1)
+		BEGIN;  
+			 INSERT INTO @temp values (@OBJNUM, @MAJORGRP, @FAMILYGRP, @RPTNAME, @SLUNAME, ROUND(@PRICE, 2))
+			 print 'next'
+			 FETCH NEXT FROM @rec_set INTO @OBJNUM, @MAJORGRP, @FAMILYGRP, @RPTNAME, @SLUNAME, @PRICE
+		END 
+	
+
+	CLOSE @rec_set
+	DEALLOCATE @rec_set
+
+	SELECT * FROM @TEMP
+END
+GO
+
+

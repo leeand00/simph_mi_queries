@@ -1,0 +1,75 @@
+USE [CAPS_DB]
+GO
+
+/****** Object:  StoredProcedure [dbo].[get_visible_simph_menu_MIs_and_price]    Script Date: 7/21/2023 2:38:34 PM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+
+CREATE   PROCEDURE [dbo].[get_visible_simph_menu_MIs_and_price]
+    @start_range int = NULL,
+	@end_range int = NULL,
+	@h_id as int = NULL,
+	@the_results CURSOR VARYING OUTPUT
+AS   
+    SET NOCOUNT ON;  
+
+-- =============================================
+-- Author:		<Author,,Name>
+-- Create date: <Create Date,,>
+-- Description:	<Description,,>
+-- =============================================
+IF @start_range IS NULL 
+BEGIN
+	PRINT 'ERROR: A start_range is required.'
+	RETURN
+END
+
+IF @end_range IS NULL
+BEGIN
+	PRINT 'ERROR A end_range is required.'
+	RETURN
+END
+
+IF @h_id IS NULL
+BEGIN
+	PRINT 'ERROR An h_id is required:'
+	PRINT ' 32 - PDRAFT'
+	PRINT ' 25 - Eatery'
+	RETURN
+END
+
+BEGIN
+
+PRINT @start_range
+PRINT @end_range
+PRINT @h_id
+
+SET @the_results = CURSOR FORWARD_ONLY STATIC FOR SELECT mim.ObjectNumber, st2.StringText /*[dbo].[get_me_tbl_str](mig.NameID, @h_id)*/ /*CAST(mig.NameID AS VARCHAR(128))*/ AS 'Major Group', st1.StringText AS 'Family Group', st.[StringText] AS 'Reporting Name', st3.StringText AS 'POS Screen Lookup', p.Price
+  FROM (((((((((([dbo].[MENU_ITEM_MASTER] mim INNER JOIN [dbo].[MENU_ITEM_DEFINITION] mid ON mid.MenuItemMasterID = mim.MenuItemMasterID) INNER JOIN [dbo].[STRING_TABLE] st ON st.StringNumberID = Name1ID) 
+		 INNER JOIN [dbo].[MAJOR_GROUP] mig ON mim.MajGrpObjNum = mig.ObjectNumber) INNER JOIN [dbo].[FAMILY_GROUP] fg ON mim.FamGrpObjNum = fg.ObjectNumber) 
+	   ) INNER JOIN [dbo].[STRING_TABLE] st1 ON st1.StringNumberID = fg.NameID) INNER JOIN [dbo].[STRING_TABLE] st2 ON st2.StringNumberID = mig.NameID) 
+	   INNER JOIN [dbo].[SCREEN_LOOKUP] sl ON sl.SluIndex = mid.SluIndex) INNER JOIN [dbo].[STRING_TABLE] st3 ON st3.StringNumberID = sl.NameID) INNER JOIN [dbo].[STRING_TABLE] st4 ON st4.StringNumberID = mid.Name2ID) 
+	   INNER JOIN [dbo].[MENU_ITEM_PRICE] p ON p.MenuItemDefID = mid.MenuItemDefID
+
+/* 32 - PDRAFT */
+/* 25   - Eatery */
+  WHERE mim.HierStrucID IN (1) AND /* Enterprise Level */
+   ((mim.ObjectNumber BETWEEN @start_range AND @end_range) 
+   ) AND mid.HierStrucID = @h_id
+   AND MainLvl = '11111111' AND SubLvl = '11111111' AND mid.SluIndex IS NOT NULL AND MenuItemClassObjNum IS NOT NULL AND mim.MajGrpObjNum IS NOT NULL AND mim.FamGrpObjNum IS NOT NULL 
+   AND SluType = 6 AND DeviceType = 1 AND sl.HierStrucID = 2
+   
+   ORDER BY st3.StringText,ObjectNumber,st.StringText for read only
+
+   
+
+   OPEN @the_results
+   
+END
+GO
+
+
